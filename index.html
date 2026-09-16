@@ -349,13 +349,13 @@ body::before{
 <button id="music-toggle" type="button" aria-label="Toggle background music" aria-pressed="false">
   <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
 </button>
-<audio id="bg-music" loop preload="none">
+<audio id="bg-music" loop preload="auto">
   <source src="assets/music.mp3" type="audio/mpeg">
 </audio>
 
 <!-- ============ HERO ============ -->
 <section class="hero" id="hero">
-  <video class="hero-video" autoplay muted loop playsinline poster="assets/monogram.jpg">
+  <video class="hero-video" id="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="assets/monogram.jpg">
     <source src="assets/hero-video.mp4" type="video/mp4">
   </video>
   <div class="hero-overlay"></div>
@@ -579,6 +579,28 @@ body::before{
   "use strict";
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var body = document.body;
+
+  /* ---------- Hero video: force play tied to the actual user gesture ----------
+     autoplay+muted alone is unreliable in strict in-app browsers (WhatsApp,
+     Instagram, etc.) that guests are very likely opening this link from. Calling
+     .play() synchronously inside the click/tap handler (not inside a setTimeout)
+     keeps it tied to the user gesture so it's honored everywhere. */
+  var heroVideo = document.getElementById('hero-video');
+  var bgMusic = document.getElementById('bg-music');
+  var musicBtn = document.getElementById('music-toggle');
+  var musicMuted = false;
+  function playHeroVideo(){
+    if (!heroVideo) return;
+    heroVideo.muted = true;
+    var p = heroVideo.play();
+    if (p && typeof p.catch === 'function') p.catch(function(){});
+  }
+  function startMusic(){
+    if (!bgMusic || musicMuted) return;
+    var p = bgMusic.play();
+    if (p && typeof p.catch === 'function') p.catch(function(){});
+    if (musicBtn){ musicBtn.setAttribute('aria-pressed','true'); musicBtn.style.borderColor = 'var(--gold)'; musicBtn.style.opacity = '1'; }
+  }
 
   /* ---------- Intro / cinematic monogram portal (WebGL) ---------- */
   var introEl = document.getElementById('intro');
@@ -814,6 +836,7 @@ body::before{
   function openPortal(){
     try { localStorage.setItem(seenKey, '1'); } catch(e){}
     userTapped = true;
+    playHeroVideo(); startMusic();
     if (reducedMotion || !glReady){ lightWash.classList.add('wash'); setTimeout(finishIntro, 300); return; }
 
     portalHint.classList.add('hide');
@@ -849,6 +872,7 @@ body::before{
   monoBtn.addEventListener('click', openPortal);
   skipBtn.addEventListener('click', function(){
     try { localStorage.setItem(seenKey, '1'); } catch(e){}
+    playHeroVideo(); startMusic();
     introEl.classList.add('hidden');
     finishIntro();
   });
@@ -859,7 +883,15 @@ body::before{
     navTrigger.classList.add('show');
     heroEl.classList.add('play');
     stopGLLoop();
+    playHeroVideo(); startMusic();
   }
+
+  // Some mobile browsers only honor the very first gesture on the page; as a safety
+  // net, try again on the first tap/touch anywhere before the intro closes.
+  document.addEventListener('pointerdown', function once(){
+    playHeroVideo(); startMusic();
+    document.removeEventListener('pointerdown', once);
+  }, {once:true});
 
   /* ---------- Nav overlay ---------- */
   var navOverlay = document.getElementById('nav-overlay');
@@ -870,21 +902,18 @@ body::before{
     a.addEventListener('click', function(){ navOverlay.classList.remove('open'); });
   });
 
-  /* ---------- Music toggle ---------- */
-  var musicBtn = document.getElementById('music-toggle');
-  var music = document.getElementById('bg-music');
-  var playing = false;
+  /* ---------- Music toggle (mute/unmute — music auto-starts with the invitation) ---------- */
   musicBtn.addEventListener('click', function(){
-    if (!playing){
-      music.play().catch(function(){});
-      playing = true;
-      musicBtn.setAttribute('aria-pressed','true');
-      musicBtn.style.borderColor = 'var(--gold)';
-    } else {
-      music.pause();
-      playing = false;
+    musicMuted = !musicMuted;
+    if (musicMuted){
+      bgMusic.pause();
       musicBtn.setAttribute('aria-pressed','false');
       musicBtn.style.borderColor = 'rgba(184,145,42,.4)';
+      musicBtn.style.opacity = '.55';
+    } else {
+      startMusic();
+      musicBtn.style.borderColor = 'var(--gold)';
+      musicBtn.style.opacity = '1';
     }
   });
 
