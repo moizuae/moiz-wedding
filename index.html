@@ -771,14 +771,14 @@ body::before{
     var pos = new Float32Array(n*3), vel = new Float32Array(n*3);
     for (var i=0;i<n;i++){
       var theta = Math.random()*Math.PI*2, phi = Math.acos(2*Math.random()-1);
-      var speed = 0.018+Math.random()*0.05;
+      var speed = 0.022+Math.random()*0.07;
       vel[i*3]   = Math.sin(phi)*Math.cos(theta)*speed;
       vel[i*3+1] = Math.sin(phi)*Math.sin(theta)*speed;
-      vel[i*3+2] = Math.cos(phi)*speed*1.3 + 0.012;
+      vel[i*3+2] = Math.cos(phi)*speed*1.5 + 0.02;
     }
     var geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-    var mat = new THREE.PointsMaterial({size:.06, map:gl.spriteTex, color:0xffe8b8, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true});
+    var mat = new THREE.PointsMaterial({size:.075, map:gl.spriteTex, color:0xffe8b8, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true});
     var pts = new THREE.Points(geo, mat);
     pts.userData.vel = vel; pts.userData.born = performance.now();
     gl.scene.add(pts);
@@ -815,7 +815,7 @@ body::before{
     if (gl.burst){
       var bpos = gl.burst.geometry.attributes.position.array;
       var vel = gl.burst.userData.vel;
-      var age = (now - gl.burst.userData.born)/1700;
+      var age = (now - gl.burst.userData.born)/2200;
       for (var k=0;k<bpos.length;k+=3){
         bpos[k]+=vel[k]; bpos[k+1]+=vel[k+1]; bpos[k+2]+=vel[k+2];
       }
@@ -890,18 +890,25 @@ body::before{
       tween(gl.bloom, 'strength', 2.5, 1300, easeInOutCubic);
     }, 1300);
 
-    // phase 3 (2.65s) – monogram explodes into particles, camera travels through
+    // phase 2b (2.55s) – maximum energy: a brief held flash before the transformation
     setTimeout(function(){
-      spawnBurst(W < 640 ? 260 : 460);
-      if (gl.medallion) tween(gl.medallion.material, 'opacity', 0, 650);
-      tween(gl.halo.material, 'opacity', 0, 850);
-      tween(gl.camera.position, 'z', 0.7, 1400, easeInOutCubic);
+      tween(gl.bloom, 'strength', 3.6, 180);
+    }, 2550);
+
+    // phase 3 (2.65s) – monogram transforms into particles; camera travels THROUGH
+    // the emblem (position goes negative, past where the plane sat at z=0) so the
+    // guest feels like they've flown through it, not just zoomed up to it.
+    setTimeout(function(){
+      spawnBurst(W < 640 ? 320 : 560);
+      if (gl.medallion) tween(gl.medallion.material, 'opacity', 0, 520);
+      tween(gl.halo.material, 'opacity', 0, 800);
+      tween(gl.camera.position, 'z', -1.1, 1750, easeInOutCubic);
     }, 2650);
 
-    // phase 4 (2.75s) – warm light wash, hero emerges
-    setTimeout(function(){ lightWash.classList.add('wash'); }, 2750);
-    setTimeout(function(){ portalEl.classList.add('fade'); }, 2950);
-    setTimeout(finishIntro, 4200);
+    // phase 4 (2.95s) – warm light wash as the camera emerges on the other side
+    setTimeout(function(){ lightWash.classList.add('wash'); }, 2950);
+    setTimeout(function(){ portalEl.classList.add('fade'); }, 3100);
+    setTimeout(finishIntro, 4550);
   }
   monoBtn.addEventListener('click', openPortal);
   skipBtn.addEventListener('click', function(){
