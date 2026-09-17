@@ -756,7 +756,7 @@ body::before{
 
     gl.composer = new EffectComposer(gl.renderer);
     gl.composer.addPass(new RenderPass(gl.scene, gl.camera));
-    gl.bloom = new UnrealBloomPass(new THREE.Vector2(W,H), 0.55, 0.5, 0.62);
+    gl.bloom = new UnrealBloomPass(new THREE.Vector2(W,H), 0.26, 0.4, 0.78);
     gl.composer.addPass(gl.bloom);
 
     // lights: a warm key light lets the metal rim actually catch highlights as it
@@ -764,20 +764,20 @@ body::before{
     // Kept deliberately soft: the front face is an unlit texture (so it always
     // shows your exact artwork), and strong lights + bloom together were blowing
     // the whole medallion out to white and washing out the calligraphy.
-    var keyLight = new THREE.DirectionalLight(0xfff0d0, 0.55);
+    var keyLight = new THREE.DirectionalLight(0xfff0d0, 0.32);
     keyLight.position.set(2.2, 2.6, 3.5);
     gl.scene.add(keyLight);
-    var fillLight = new THREE.AmbientLight(0x4a3418, 0.7);
+    var fillLight = new THREE.AmbientLight(0x4a3418, 0.55);
     gl.scene.add(fillLight);
-    var rimLight = new THREE.DirectionalLight(0xc7a46a, 0.22);
+    var rimLight = new THREE.DirectionalLight(0xc7a46a, 0.14);
     rimLight.position.set(-2, -1, -2);
     gl.scene.add(rimLight);
 
     gl.spriteTex = makeSpriteTexture();
 
-    var haloMat = new THREE.SpriteMaterial({map:gl.spriteTex, color:0xc7a46a, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false});
+    var haloMat = new THREE.SpriteMaterial({map:gl.spriteTex, color:0xc7a46a, transparent:true, opacity:.07, blending:THREE.AdditiveBlending, depthWrite:false});
     gl.halo = new THREE.Sprite(haloMat);
-    gl.halo.scale.set(3.2,3.2,1);
+    gl.halo.scale.set(2.3,2.3,1);
     gl.halo.position.z = -0.2;
     gl.scene.add(gl.halo);
 
@@ -786,14 +786,14 @@ body::before{
     gl.medallionGroup = new THREE.Group();
     gl.scene.add(gl.medallionGroup);
 
-    var edgeMat = new THREE.MeshStandardMaterial({color:0x8a6a2a, metalness:.88, roughness:.32, transparent:true, opacity:1});
+    var edgeMat = new THREE.MeshStandardMaterial({color:0x8a6a2a, metalness:.65, roughness:.45, transparent:true, opacity:1});
     var edgeGeo = new THREE.CylinderGeometry(1.245, 1.245, 0.05, 72, 1, true);
     var edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
     edgeMesh.rotation.x = Math.PI/2;
     gl.medallionGroup.add(edgeMesh);
     gl.medallionEdge = edgeMesh;
 
-    var backMat = new THREE.MeshStandardMaterial({color:0x6b5220, metalness:.7, roughness:.4, transparent:true, opacity:1});
+    var backMat = new THREE.MeshStandardMaterial({color:0x6b5220, metalness:.55, roughness:.5, transparent:true, opacity:1});
     var backPlane = new THREE.Mesh(new THREE.CircleGeometry(1.24, 72), backMat);
     backPlane.position.z = -0.025;
     backPlane.rotation.y = Math.PI;
@@ -924,9 +924,9 @@ body::before{
     if (gl.medallionBack) gl.medallionBack.material.opacity = 1;
     if (gl.medallionEdge) gl.medallionEdge.material.opacity = 1;
     if (gl.medallionGroup) gl.medallionGroup.rotation.set(0,0,0);
-    if (gl.halo) gl.halo.material.opacity = .16;
+    if (gl.halo) gl.halo.material.opacity = .07;
     gl.camera.position.set(0,0,6);
-    gl.bloom.strength = 0.55;
+    gl.bloom.strength = 0.26;
     gl.spinning = false; gl.spinSpeed = 0;
     if (gl.burst){ gl.scene.remove(gl.burst); gl.burst.geometry.dispose(); gl.burst.material.dispose(); gl.burst=null; }
     gl.traceSparks.forEach(function(s){ gl.scene.remove(s.mesh); s.mesh.material.dispose(); });
@@ -985,20 +985,20 @@ body::before{
       var lt = t*Math.PI*4;
       spawnTraceSpark(lt, 0.55 + Math.sin(t*Math.PI*3)*0.15, true);
     }, 45);
-    tween(gl.halo.material, 'opacity', .48, 1200);
+    tween(gl.halo.material, 'opacity', .24, 1200);
     gl.spinning = true; gl.spinSpeed = 0.0035;
     tween(gl, 'spinSpeed', 0.014, 1300, easeInOutCubic);
 
     // phase 2 (1.3s) – camera dolly-in + peak bloom, medallion turning faster
     setTimeout(function(){
       tween(gl.camera.position, 'z', 3.1, 1300, easeInOutCubic);
-      tween(gl.bloom, 'strength', 1.3, 1300, easeInOutCubic);
+      tween(gl.bloom, 'strength', 0.6, 1300, easeInOutCubic);
       tween(gl, 'spinSpeed', 0.03, 1300, easeInOutCubic);
     }, 1300);
 
     // phase 2b (2.55s) – maximum energy: a brief held flash before the transformation
     setTimeout(function(){
-      tween(gl.bloom, 'strength', 1.9, 180);
+      tween(gl.bloom, 'strength', 0.85, 180);
     }, 2550);
 
     // phase 3 (2.65s) – monogram transforms into particles; camera travels THROUGH
