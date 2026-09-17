@@ -676,20 +676,32 @@ body::before{
     pointerY = (e.clientY/window.innerHeight - .5) * 2;
   });
 
-  function loadThree(){
-    return import('https://unpkg.com/three@0.160.0/build/three.module.js').then(function(mod){
+  function loadThreeFrom(base){
+    return import(base + 'three@0.160.0/build/three.module.js').then(function(mod){
       THREE = mod;
       return Promise.all([
-        import('https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'),
-        import('https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'),
-        import('https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js')
+        import(base + 'three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'),
+        import(base + 'three@0.160.0/examples/jsm/postprocessing/RenderPass.js'),
+        import(base + 'three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js')
       ]);
     }).then(function(mods){
       EffectComposer = mods[0].EffectComposer;
       RenderPass = mods[1].RenderPass;
       UnrealBloomPass = mods[2].UnrealBloomPass;
       return true;
-    }).catch(function(){ return false; });
+    });
+  }
+  function loadThree(){
+    // Try unpkg first, then jsDelivr as a second CDN — some networks/regions block
+    // or throttle one but not the other. Logs the real reason to the console so
+    // this is diagnosable instead of silently falling back every time.
+    return loadThreeFrom('https://unpkg.com/').catch(function(err){
+      console.warn('[wedding-site] three.js failed to load from unpkg, trying jsDelivr…', err);
+      return loadThreeFrom('https://cdn.jsdelivr.net/npm/').catch(function(err2){
+        console.error('[wedding-site] three.js failed to load from both unpkg and jsDelivr — falling back to the static monogram image. Likely causes: network/firewall blocking these CDNs, an ad-blocker, or no internet at the moment of load.', err2);
+        return false;
+      });
+    });
   }
 
   function makeSpriteTexture(){
@@ -904,6 +916,7 @@ body::before{
   }
 
   if (reducedMotion){
+    console.log('[wedding-site] reduced-motion is on — showing the static monogram, skipping the 3D portal.');
     monoFallback.classList.add('show');
     glCanvas.classList.add('hide-canvas');
   } else {
@@ -911,13 +924,17 @@ body::before{
     // WebGL libraries load; swap to the live 3D scene once (and if) they arrive.
     monoFallback.classList.add('show');
     loadThree().then(function(ok){
-      if (!ok || userTapped) return;            // CDN blocked/slow, or guest already tapped — keep the simple fallback
+      if (!ok){ console.warn('[wedding-site] three.js never loaded — staying on the static monogram fallback.'); return; }
+      if (userTapped){ console.log('[wedding-site] three.js loaded, but the guest had already tapped through on the simple fallback — 3D scene will be ready on replay.'); return; }
       var initOk = initGL();
       if (initOk){
+        console.log('[wedding-site] WebGL 3D portal is live.');
         glReady = true;
         monoFallback.classList.remove('show');
         glCanvas.classList.remove('hide-canvas');
         startGLLoop();
+      } else {
+        console.warn('[wedding-site] three.js loaded but WebGL context creation failed (no GPU/WebGL support?) — staying on the static monogram fallback.');
       }
     });
   }
