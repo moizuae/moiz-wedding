@@ -151,11 +151,18 @@ body::before{
 .mono-fallback-img{display:none; width:100%; border-radius:50%; filter:brightness(.88);}
 .mono-fallback-img.show{display:block;}
 
+/* engraved caption, not a UI label — sits low in the frame, appears after a beat
+   in the dark so the medallion is discovered first */
 .portal-hint{
-  margin-top:34px; font-family:var(--font-caps); font-size:9px; letter-spacing:.34em; color:rgba(199,164,106,.7);
-  animation:hintBreathe 3.4s ease-in-out infinite; text-align:center;
+  position:fixed; left:50%; bottom:min(9vh,72px); transform:translateX(-50%);
+  display:flex; align-items:center; gap:16px;
+  font-family:var(--font-caps); font-size:8px; letter-spacing:.42em; color:rgba(199,164,106,.55);
+  text-align:center; white-space:nowrap; opacity:0;
+  animation:hintArrive 1.6s ease forwards 1.8s, hintBreathe 3.4s ease-in-out infinite 3.4s;
 }
-@keyframes hintBreathe{0%,100%{opacity:.4;} 50%{opacity:.85;}}
+.portal-hint .ph-line{width:26px; height:1px; background:rgba(199,164,106,.4);}
+@keyframes hintArrive{from{opacity:0;} to{opacity:1;}}
+@keyframes hintBreathe{0%,100%{opacity:.55;} 50%{opacity:.9;}}
 .portal-hint.hide{animation:none; opacity:0; transition:opacity .5s ease;}
 
 #light-wash{
@@ -210,14 +217,14 @@ body::before{
 .hero-cue .line{width:1px; height:34px; background:linear-gradient(var(--gold-light), transparent); animation:cueMove 2.4s ease-in-out infinite;}
 @keyframes cueMove{0%{transform:scaleY(0); transform-origin:top;} 50%{transform:scaleY(1); transform-origin:top;} 51%{transform-origin:bottom;} 100%{transform:scaleY(0); transform-origin:bottom;}}
 @keyframes fadeUp{from{opacity:0; transform:translateY(16px);} to{opacity:1; transform:translateY(0);}}
-.hero.play .hero-eyebrow{animation:fadeUp 1.2s ease .1s forwards;}
-.hero.play .hero-script{animation:fadeUp 1.2s ease .3s forwards;}
-.hero.play .beat-1{animation:fadeUp 1s ease .55s forwards;}
-.hero.play .beat-2{animation:fadeUp .9s ease .85s forwards;}
-.hero.play .beat-3{animation:fadeUp 1s ease 1.05s forwards;}
-.hero.play .hero-date{animation:fadeUp 1.2s ease 1.5s forwards;}
-.hero.play .hero-tagline{animation:fadeUp 1.2s ease 1.75s forwards;}
-.hero.play .hero-cue{animation:fadeUp 1.2s ease 2.1s forwards;}
+.hero.play .beat-1{animation:fadeUp 1.1s ease .15s forwards;}
+.hero.play .beat-2{animation:fadeUp .9s ease .5s forwards;}
+.hero.play .beat-3{animation:fadeUp 1.1s ease .72s forwards;}
+.hero.play .hero-date{animation:fadeUp 1.2s ease 1.15s forwards;}
+.hero.play .hero-eyebrow{animation:fadeUp 1.3s ease 1.6s forwards;}
+.hero.play .hero-script{animation:fadeUp 1.3s ease 1.8s forwards;}
+.hero.play .hero-tagline{animation:fadeUp 1.3s ease 2.05s forwards;}
+.hero.play .hero-cue{animation:fadeUp 1.2s ease 2.4s forwards;}
 
 /* ============ STORY ============ */
 .story{background:transparent; position:relative;}
@@ -352,7 +359,7 @@ body::before{
       <img id="mono-fallback" src="assets/medallion.png" alt="Moiz &amp; Hussaina monogram" class="mono-fallback-img">
       <button type="button" id="mono-btn" class="mono-hit" aria-label="Tap the emblem to unveil the invitation"></button>
     </div>
-    <p class="portal-hint" id="portal-hint">Tap the emblem to unveil</p>
+    <p class="portal-hint" id="portal-hint"><span class="ph-line"></span>Touch to Unveil<span class="ph-line"></span></p>
   </div>
 </div>
 <div id="light-wash"></div>
@@ -657,11 +664,17 @@ body::before{
      breaking the rest of the page's JS (RSVP, nav, countdown, etc.). */
   var THREE=null, EffectComposer=null, RenderPass=null, UnrealBloomPass=null;
   var gl = { ok:false, renderer:null, scene:null, camera:null, composer:null, bloom:null,
-             medallion:null, halo:null, ambient:null, ambientVel:null, spriteTex:null,
+             medallion:null, medallionGroup:null, medallionBack:null, medallionEdge:null,
+             halo:null, ambient:null, ambientVel:null, spriteTex:null,
              burst:null, traceSparks:[], running:false, rafId:null };
   var W = window.innerWidth, H = window.innerHeight;
   var glReady = false;
   var userTapped = false;
+  var pointerX = 0, pointerY = 0;
+  window.addEventListener('pointermove', function(e){
+    pointerX = (e.clientX/window.innerWidth - .5) * 2;
+    pointerY = (e.clientY/window.innerHeight - .5) * 2;
+  });
 
   function loadThree(){
     return import('https://unpkg.com/three@0.160.0/build/three.module.js').then(function(mod){
@@ -719,13 +732,43 @@ body::before{
     gl.bloom = new UnrealBloomPass(new THREE.Vector2(W,H), 1.1, 0.65, 0.3);
     gl.composer.addPass(gl.bloom);
 
+    // lights: a warm key light lets the metal rim actually catch highlights as it
+    // rotates — this is what sells "physical object" rather than "flat image".
+    var keyLight = new THREE.DirectionalLight(0xfff0d0, 1.4);
+    keyLight.position.set(2.2, 2.6, 3.5);
+    gl.scene.add(keyLight);
+    var fillLight = new THREE.AmbientLight(0x4a3418, 0.85);
+    gl.scene.add(fillLight);
+    var rimLight = new THREE.DirectionalLight(0xc7a46a, 0.5);
+    rimLight.position.set(-2, -1, -2);
+    gl.scene.add(rimLight);
+
     gl.spriteTex = makeSpriteTexture();
 
     var haloMat = new THREE.SpriteMaterial({map:gl.spriteTex, color:0xc7a46a, transparent:true, opacity:.32, blending:THREE.AdditiveBlending, depthWrite:false});
     gl.halo = new THREE.Sprite(haloMat);
     gl.halo.scale.set(4.4,4.4,1);
-    gl.halo.position.z = -0.15;
+    gl.halo.position.z = -0.2;
     gl.scene.add(gl.halo);
+
+    // the medallion is a real 3D object — a front face, a solid back plate, and a
+    // metallic edge wall with actual thickness — not a single flat sprite.
+    gl.medallionGroup = new THREE.Group();
+    gl.scene.add(gl.medallionGroup);
+
+    var edgeMat = new THREE.MeshStandardMaterial({color:0x8a6a2a, metalness:.88, roughness:.32, transparent:true, opacity:1});
+    var edgeGeo = new THREE.CylinderGeometry(1.245, 1.245, 0.05, 72, 1, true);
+    var edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
+    edgeMesh.rotation.x = Math.PI/2;
+    gl.medallionGroup.add(edgeMesh);
+    gl.medallionEdge = edgeMesh;
+
+    var backMat = new THREE.MeshStandardMaterial({color:0x6b5220, metalness:.7, roughness:.4, transparent:true, opacity:1});
+    var backPlane = new THREE.Mesh(new THREE.CircleGeometry(1.24, 72), backMat);
+    backPlane.position.z = -0.025;
+    backPlane.rotation.y = Math.PI;
+    gl.medallionGroup.add(backPlane);
+    gl.medallionBack = backPlane;
 
     var loader = new THREE.TextureLoader();
     loader.load('assets/medallion.png', function(tex){
@@ -733,7 +776,8 @@ body::before{
       var mat = new THREE.MeshBasicMaterial({map:tex, transparent:true});
       var geo = new THREE.PlaneGeometry(2.5,2.5);
       gl.medallion = new THREE.Mesh(geo, mat);
-      gl.scene.add(gl.medallion);
+      gl.medallion.position.z = 0.026;
+      gl.medallionGroup.add(gl.medallion);
     });
 
     var ambientCount = W < 640 ? 220 : 380;
@@ -785,12 +829,15 @@ body::before{
     gl.burst = pts;
   }
 
-  function spawnTraceSpark(angle){
-    var ringR = 1.28;
-    var mat = new THREE.SpriteMaterial({map:gl.spriteTex, color:0xfff0c8, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+  function spawnTraceSpark(angle, radius, isCore){
+    var mat = new THREE.SpriteMaterial({map:gl.spriteTex, color:isCore?0xffffff:0xfff0c8, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
     var sp = new THREE.Sprite(mat);
-    sp.scale.set(.13,.13,1);
-    sp.position.set(Math.cos(angle)*ringR, Math.sin(angle)*ringR, 0.06);
+    var s = isCore ? .09 : .13;
+    sp.scale.set(s,s,1);
+    var x, y;
+    if (isCore){ x = Math.cos(angle)*radius; y = Math.sin(angle*1.7)*radius*0.7; }
+    else { x = Math.cos(angle)*radius; y = Math.sin(angle)*radius; }
+    sp.position.set(x, y, 0.08);
     gl.scene.add(sp);
     gl.traceSparks.push({mesh:sp, born:performance.now()});
   }
@@ -798,6 +845,19 @@ body::before{
   function animateGL(now){
     if (!gl.running) return;
     gl.rafId = requestAnimationFrame(animateGL);
+    if (gl.medallionGroup){
+      if (!userTapped){
+        // idle: the medallion gently rotates and responds to the pointer, like a
+        // real object hanging in space rather than a static picture
+        var idleY = Math.sin(now*0.00025)*0.17 + pointerX*0.13;
+        var idleX = Math.sin(now*0.00017)*0.05 - pointerY*0.08;
+        gl.medallionGroup.rotation.y += (idleY - gl.medallionGroup.rotation.y)*0.04;
+        gl.medallionGroup.rotation.x += (idleX - gl.medallionGroup.rotation.x)*0.04;
+      } else if (gl.spinning){
+        gl.medallionGroup.rotation.y += gl.spinSpeed;
+        gl.medallionGroup.rotation.x += gl.spinSpeed*0.25;
+      }
+    }
     if (gl.ambient){
       var arr = gl.ambient.geometry.attributes.position.array;
       for (var i=0;i<arr.length;i+=3){
@@ -831,9 +891,13 @@ body::before{
   function resetGLScene(){
     if (!gl.ok) return;
     if (gl.medallion) gl.medallion.material.opacity = 1;
+    if (gl.medallionBack) gl.medallionBack.material.opacity = 1;
+    if (gl.medallionEdge) gl.medallionEdge.material.opacity = 1;
+    if (gl.medallionGroup) gl.medallionGroup.rotation.set(0,0,0);
     if (gl.halo) gl.halo.material.opacity = .32;
     gl.camera.position.set(0,0,6);
     gl.bloom.strength = 1.1;
+    gl.spinning = false; gl.spinSpeed = 0;
     if (gl.burst){ gl.scene.remove(gl.burst); gl.burst.geometry.dispose(); gl.burst.material.dispose(); gl.burst=null; }
     gl.traceSparks.forEach(function(s){ gl.scene.remove(s.mesh); s.mesh.material.dispose(); });
     gl.traceSparks = [];
@@ -875,19 +939,26 @@ body::before{
 
     portalHint.classList.add('hide');
 
-    // phase 1 (0.0s) – energy traces the monogram ring
-    var traceStart = performance.now(), traceDuration = 1200;
+    // phase 1 (0.0s) – energy traces the monogram: one pass around the ring, one
+    // pass through a curve approximating the calligraphy at the center, so the
+    // light reads as travelling through the actual emblem, not just orbiting it.
+    var traceStart = performance.now(), traceDuration = 1300;
     var traceTimer = setInterval(function(){
       var t = (performance.now()-traceStart)/traceDuration;
       if (t >= 1){ clearInterval(traceTimer); return; }
-      spawnTraceSpark(t*Math.PI*2 - Math.PI/2);
+      spawnTraceSpark(t*Math.PI*2 - Math.PI/2, 1.28);
+      var lt = t*Math.PI*4;
+      spawnTraceSpark(lt, 0.55 + Math.sin(t*Math.PI*3)*0.15, true);
     }, 45);
     tween(gl.halo.material, 'opacity', .78, 1200);
+    gl.spinning = true; gl.spinSpeed = 0.0035;
+    tween(gl, 'spinSpeed', 0.014, 1300, easeInOutCubic);
 
-    // phase 2 (1.3s) – camera dolly-in + peak bloom
+    // phase 2 (1.3s) – camera dolly-in + peak bloom, medallion turning faster
     setTimeout(function(){
       tween(gl.camera.position, 'z', 3.1, 1300, easeInOutCubic);
       tween(gl.bloom, 'strength', 2.5, 1300, easeInOutCubic);
+      tween(gl, 'spinSpeed', 0.03, 1300, easeInOutCubic);
     }, 1300);
 
     // phase 2b (2.55s) – maximum energy: a brief held flash before the transformation
@@ -901,8 +972,11 @@ body::before{
     setTimeout(function(){
       spawnBurst(W < 640 ? 320 : 560);
       if (gl.medallion) tween(gl.medallion.material, 'opacity', 0, 520);
+      tween(gl.medallionBack.material, 'opacity', 0, 520);
+      tween(gl.medallionEdge.material, 'opacity', 0, 520);
       tween(gl.halo.material, 'opacity', 0, 800);
       tween(gl.camera.position, 'z', -1.1, 1750, easeInOutCubic);
+      tween(gl, 'spinSpeed', 0.06, 1600, easeInOutCubic);
     }, 2650);
 
     // phase 4 (2.95s) – warm light wash as the camera emerges on the other side
@@ -1055,6 +1129,7 @@ body::before{
     lightWash.classList.remove('wash');
     heroEl.classList.remove('play');
     body.classList.add('locked');
+    userTapped = false;
     if (glReady){ resetGLScene(); startGLLoop(); }
   });
 
