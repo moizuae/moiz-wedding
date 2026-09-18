@@ -58,7 +58,7 @@ a:focus-visible, button:focus-visible{outline:1px solid var(--gold); outline-off
 .caps{font-family:var(--font-caps); text-transform:uppercase; letter-spacing:.28em; font-size:11px; color:var(--gold-light);}
 
 /* ---- royal ornamental section divider ---- */
-.royal-divider{display:flex; align-items:center; justify-content:center; gap:14px; margin:0 auto 36px; opacity:.85;}
+.royal-divider{display:flex; align-items:center; justify-content:center; gap:14px; margin:0 auto 36px; opacity:.85; position:relative; z-index:2;}
 .royal-divider .rd-line{width:min(18vw,90px); height:1px; background:linear-gradient(90deg, transparent, rgba(199,164,106,.55));}
 .royal-divider .rd-line.right{background:linear-gradient(270deg, transparent, rgba(199,164,106,.55));}
 .royal-divider .rd-dot{width:6px; height:6px; border-radius:50%; border:1px solid var(--gold-light); position:relative;}
@@ -193,16 +193,38 @@ body::before{
 .reveal{opacity:0; transform:translateY(28px); transition:opacity 1.1s cubic-bezier(.2,.7,.2,1), transform 1.1s cubic-bezier(.2,.7,.2,1);}
 .reveal.in{opacity:1; transform:translateY(0);}
 
-/* ============ SECTION BACKGROUND PHOTOS (optional, added via assets/) ============
-   Sections stay exactly as they are today unless the matching image actually
-   loads — see the preloader in the script. Once present, each section gets its
-   photo full-bleed behind it with a dark wash so text stays legible. */
-.section.has-bg, .ending.has-bg{
+/* ============ SECTION BACKGROUND MEDIA (optional, added via assets/) ============
+   Sections stay exactly as they are today unless a matching video or image
+   actually loads — see the lazy loader in the script (checked only as each
+   section nears the viewport, video tried first, image as a fallback).
+   The media sits in a height-capped band at the top of the section rather than
+   stretched across its full (often very tall, text-driven) height — object-fit:
+   cover on a landscape photo forced into a tall narrow mobile section otherwise
+   crops almost the entire width away. The band fades into the section's own
+   dark background below, and the usual wash + color tint sit on top so text
+   stays legible either way. */
+.section-bg-media{
+  position:absolute; top:0; left:0; right:0; z-index:0; overflow:hidden;
+  height:min(78vh, 640px);
   background-size:cover; background-position:center; background-repeat:no-repeat;
-  background-image:
-    linear-gradient(180deg, rgba(20,15,10,.82) 0%, rgba(20,15,10,.7) 40%, rgba(20,15,10,.88) 100%),
-    var(--bg-spotlight, none),
-    var(--bg-photo);
+  background-image: var(--bg-photo, none);
+}
+.section-bg-media::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:55%;
+  background:linear-gradient(180deg, transparent, rgba(20,15,10,.95));
+}
+.section-bg-video{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
+.section-bg-overlay{
+  position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0; transition:opacity .8s ease;
+  background:
+    linear-gradient(180deg, rgba(20,15,10,.6) 0%, rgba(20,15,10,.55) 40%, rgba(20,15,10,.88) 100%),
+    var(--bg-spotlight, none);
+}
+.section.has-bg .section-bg-overlay, .ending.has-bg .section-bg-overlay{ opacity:1; }
+@media (max-width:640px){
+  .section-bg-media{ height:min(48vh, 420px); }
 }
 
 /* ============ HERO ============ */
@@ -314,7 +336,8 @@ body::before{
 .rsvp-confirm.show{display:block;}
 
 /* ============ ENDING ============ */
-.ending{padding:min(16vh,130px) 24px; text-align:center; background:radial-gradient(ellipse 70% 60% at 50% 30%, rgba(199,164,106,.1), transparent 65%); --bg-spotlight:radial-gradient(ellipse 70% 60% at 50% 30%, rgba(199,164,106,.18), transparent 65%);}
+.ending{padding:min(16vh,130px) 24px; text-align:center; background:radial-gradient(ellipse 70% 60% at 50% 30%, rgba(199,164,106,.1), transparent 65%); --bg-spotlight:radial-gradient(ellipse 70% 60% at 50% 30%, rgba(199,164,106,.18), transparent 65%); position:relative;}
+.ending > *:not(.section-bg-overlay):not(.section-bg-media){position:relative; z-index:2;}
 .ending-mono-img{width:min(28vw,110px); border-radius:50%; margin:0 auto 22px; filter:drop-shadow(0 8px 26px rgba(199,164,106,.3));}
 .ending-line{font-family:var(--font-serif); font-style:italic; font-size:clamp(1.05rem,2.4vw,1.25rem); color:var(--text-ivory-soft); max-width:34ch; margin:0 auto; line-height:1.5;}
 .ending-signoff{margin-top:26px; font-family:var(--font-caps); font-size:11px; letter-spacing:.2em; color:var(--gold-light); line-height:1.9;}
@@ -430,6 +453,8 @@ body::before{
 
 <!-- ============ OUR STORY ============ -->
 <section class="section story" id="story">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="section-inner">
     <p class="caps eyebrow reveal">The Beginning</p>
     <p class="script-heading reveal">Our Story</p>
@@ -466,6 +491,8 @@ body::before{
 
 <!-- ============ EVENTS / CELEBRATIONS ============ -->
 <section class="section events" id="events">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <div class="section-inner">
@@ -539,6 +566,8 @@ body::before{
 
 <!-- ============ COUNTDOWN ============ -->
 <section class="section countdown" id="countdown">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <div class="section-inner">
@@ -561,6 +590,8 @@ body::before{
 
 <!-- ============ VENUE ============ -->
 <section class="section venue" id="venue">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <div class="section-inner">
@@ -587,6 +618,8 @@ body::before{
 
 <!-- ============ GALLERY (placeholder) ============ -->
 <section class="section gallery" id="gallery">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <div class="section-inner">
@@ -604,6 +637,8 @@ body::before{
 
 <!-- ============ RSVP ============ -->
 <section class="section rsvp" id="rsvp">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <div class="section-inner">
@@ -632,6 +667,8 @@ body::before{
 
 <!-- ============ ENDING ============ -->
 <section class="ending" id="ending">
+  <div class="section-bg-media"></div>
+  <div class="section-bg-overlay"></div>
   <div class="royal-divider"><span class="rd-line"></span><span class="rd-dot"></span><span class="rd-line right"></span></div>
 
   <img class="ending-mono-img" src="assets/medallion.png" alt="Moiz &amp; Hussaina monogram">
@@ -1092,31 +1129,80 @@ body::before{
     revealEls.forEach(function(el){ el.classList.add('in'); });
   }
 
-  /* ---------- Section background photos (optional) ----------
-     Drop matching files into assets/ and each section upgrades to a full-bleed
-     photo automatically — nothing to wire up. If a file isn't there, the section
-     silently stays exactly as it is today. */
-  var sectionBgs = {
-    'story':     'assets/bg-story.jpg',
-    'events':    'assets/bg-events.jpg',
-    'countdown': 'assets/bg-countdown.jpg',
-    'venue':     'assets/bg-venue.jpg',
-    'gallery':   'assets/bg-gallery.jpg',
-    'rsvp':      'assets/bg-rsvp.jpg',
-    'ending':    'assets/bg-ending.jpg'
-  };
-  Object.keys(sectionBgs).forEach(function(id){
-    var el = document.getElementById(id);
-    if (!el) return;
-    var src = sectionBgs[id];
-    var img = new Image();
-    img.onload = function(){
-      el.style.setProperty('--bg-photo', 'url(' + src + ')');
-      el.classList.add('has-bg');
-    };
-    img.onerror = function(){}; // no file yet — leave the section as-is
-    img.src = src;
-  });
+  /* ---------- Section background media (optional, lazy) ----------
+     Drop assets/bg-<section>.mp4 (or .jpg) in and that section upgrades to a
+     full-bleed video or photo automatically — nothing to wire up. Video is
+     tried first, falling back to an image, falling back to today's look if
+     neither exists. Nothing is even requested until a section nears the
+     viewport, and video only plays while its section is actually visible, to
+     keep this light on mobile data and battery. */
+  var sectionBgIds = ['story','events','countdown','venue','gallery','rsvp','ending'];
+  function tryVideoBg(id, el){
+    return new Promise(function(resolve){
+      var mediaBox = el.querySelector('.section-bg-media');
+      var v = document.createElement('video');
+      v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('webkit-playsinline','');
+      v.preload = 'auto';
+      v.className = 'section-bg-video';
+      var settled = false;
+      v.addEventListener('loadedmetadata', function(){
+        if (settled) return; settled = true;
+        mediaBox.appendChild(v);
+        el.classList.add('has-bg');
+        resolve(v);
+      });
+      v.addEventListener('error', function(){
+        if (settled) return; settled = true;
+        resolve(null);
+      });
+      v.src = 'assets/bg-' + id + '.mp4';
+    });
+  }
+  function tryImageBg(id, el){
+    return new Promise(function(resolve){
+      var mediaBox = el.querySelector('.section-bg-media');
+      var img = new Image();
+      var src = 'assets/bg-' + id + '.jpg';
+      img.onload = function(){
+        mediaBox.style.setProperty('--bg-photo', 'url(' + src + ')');
+        el.classList.add('has-bg');
+        resolve(null);
+      };
+      img.onerror = function(){ resolve(null); };
+      img.src = src;
+    });
+  }
+
+  if ('IntersectionObserver' in window){
+    var bgLoadObserver = new IntersectionObserver(function(entries, obs){
+      entries.forEach(function(entry){
+        if (!entry.isIntersecting) return;
+        var el = entry.target;
+        var id = el.id;
+        obs.unobserve(el);
+        tryVideoBg(id, el).then(function(videoEl){
+          if (!videoEl){ tryImageBg(id, el); return; }
+          // play/pause this section's video based on visibility, once it exists
+          var playObserver = new IntersectionObserver(function(es){
+            es.forEach(function(e){
+              if (e.isIntersecting) videoEl.play().catch(function(){});
+              else videoEl.pause();
+            });
+          }, {threshold:.1});
+          playObserver.observe(el);
+        });
+      });
+    }, {rootMargin:'400px 0px'});
+    sectionBgIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) bgLoadObserver.observe(el);
+    });
+  } else {
+    sectionBgIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) tryImageBg(id, el);
+    });
+  }
 
   /* ---------- Falling petals ---------- */
   (function(){
