@@ -707,6 +707,24 @@ body::before{
     if (musicBtn){ musicBtn.setAttribute('aria-pressed','true'); musicBtn.style.borderColor = 'var(--gold)'; musicBtn.style.opacity = '1'; }
   }
 
+  /* ---------- Pause music when the tab/app is not active ----------
+     Covers switching tabs, minimizing the browser, and locking the phone.
+     wasPlayingBeforeHidden remembers whether music was actually sounding
+     (not just "not muted by the user") so it only resumes if it was on. */
+  var wasPlayingBeforeHidden = false;
+  document.addEventListener('visibilitychange', function(){
+    if (!bgMusic) return;
+    if (document.hidden){
+      wasPlayingBeforeHidden = !bgMusic.paused;
+      bgMusic.pause();
+    } else {
+      if (wasPlayingBeforeHidden && !musicMuted) startMusic();
+    }
+  });
+  window.addEventListener('pagehide', function(){
+    if (bgMusic) bgMusic.pause();
+  });
+
   /* ---------- Intro / cinematic monogram portal (WebGL) ---------- */
   var introEl = document.getElementById('intro');
   var monoBtn = document.getElementById('mono-btn');
