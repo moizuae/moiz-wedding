@@ -481,7 +481,7 @@ body::before{
       <span class="chapter-mark">III.</span>
       <div>
         <h3 class="chapter-title">Forever</h3>
-        <p class="chapter-body">From the mehndi to the mama mosala, and finally our procession and bidayi at Ammar Nagar, Indore, we bring our families and friends together to celebrate — and we would be honoured to have you share in the joy with us.</p>
+        <p class="chapter-body">From the mehndi to the mama mosala, to our procession and bidayi at Ammar Nagar, Indore, and a dinner on the 17th, we bring our families and friends together to celebrate — and we would be honoured to have you share in the joy with us.</p>
       </div>
     </div>
 
@@ -558,6 +558,15 @@ body::before{
           <h3 class="t-name">Procession and Bidayi</h3>
           <p class="t-meta">14th November · Evening 7:00 PM<br>Ammar Nagar, Indore</p>
           <a class="t-link" href="https://www.google.com/maps/search/?api=1&query=Ammar%20Nagar%20Indore" target="_blank" rel="noopener">View Location</a>
+        </div>
+      </div>
+
+      <div class="t-item">
+        <span class="t-mark">VII</span>
+        <div class="t-card">
+          <p class="caps" style="margin-bottom:6px;">Dinner</p>
+          <h3 class="t-name">Dinner</h3>
+          <p class="t-meta">17th November · Evening 8:00 PM<br>Venue to be decided</p>
         </div>
       </div>
     </div>
@@ -697,33 +706,47 @@ body::before{
   function playHeroVideo(){
     if (!heroVideo) return;
     heroVideo.muted = true;
+    heroVideo.dataset.started = '1';
     var p = heroVideo.play();
     if (p && typeof p.catch === 'function') p.catch(function(){});
   }
+  var musicWanted = false;   /* guest has started music and hasn't muted it */
   function startMusic(){
     if (!bgMusic || musicMuted) return;
+    musicWanted = true;
+    if (document.hidden) return;   /* never start while the page isn't visible */
     var p = bgMusic.play();
     if (p && typeof p.catch === 'function') p.catch(function(){});
     if (musicBtn){ musicBtn.setAttribute('aria-pressed','true'); musicBtn.style.borderColor = 'var(--gold)'; musicBtn.style.opacity = '1'; }
   }
-
-  /* ---------- Pause music when the tab/app is not active ----------
-     Covers switching tabs, minimizing the browser, and locking the phone.
-     wasPlayingBeforeHidden remembers whether music was actually sounding
-     (not just "not muted by the user") so it only resumes if it was on. */
-  var wasPlayingBeforeHidden = false;
-  document.addEventListener('visibilitychange', function(){
-    if (!bgMusic) return;
-    if (document.hidden){
-      wasPlayingBeforeHidden = !bgMusic.paused;
-      bgMusic.pause();
-    } else {
-      if (wasPlayingBeforeHidden && !musicMuted) startMusic();
+  /* Pause audio + hero video whenever the page is not actively visible
+     (tab switched, browser minimized, phone locked, app backgrounded). */
+  function suspendMedia(){
+    if (bgMusic && !bgMusic.paused) bgMusic.pause();
+    if (heroVideo && !heroVideo.paused) heroVideo.pause();
+    document.querySelectorAll('.section-bg-media video').forEach(function(v){ if(!v.paused) v.pause(); });
+  }
+  function resumeMedia(){
+    if (document.hidden) return;
+    if (musicWanted && !musicMuted && bgMusic){
+      var p = bgMusic.play();
+      if (p && typeof p.catch === 'function') p.catch(function(){});
     }
+    document.querySelectorAll('.section-bg-media video').forEach(function(v){
+      var r = v.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < window.innerHeight){ var q = v.play(); if (q && q.catch) q.catch(function(){}); }
+    });
+    if (heroVideo && heroVideo.dataset.started === '1'){
+      var v = heroVideo.play();
+      if (v && typeof v.catch === 'function') v.catch(function(){});
+    }
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) suspendMedia(); else resumeMedia();
   });
-  window.addEventListener('pagehide', function(){
-    if (bgMusic) bgMusic.pause();
-  });
+  window.addEventListener('pagehide', suspendMedia);
+  window.addEventListener('pageshow', function(){ resumeMedia(); });
+  window.addEventListener('blur', function(){ if (document.hidden) suspendMedia(); });
 
   /* ---------- Intro / cinematic monogram portal (WebGL) ---------- */
   var introEl = document.getElementById('intro');
